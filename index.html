@@ -358,6 +358,10 @@
       truckMesh.material.vertexColors = true;
       carMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       truckMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      carMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      carMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      truckMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      truckMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
       return { carMesh, truckMesh, materials };
     }
 
@@ -447,6 +451,12 @@
       taillightMesh.count = lightIndex;
       vehicles.carMesh.instanceMatrix.needsUpdate = true;
       vehicles.truckMesh.instanceMatrix.needsUpdate = true;
+      if (vehicles.carMesh.instanceColor) {
+        vehicles.carMesh.instanceColor.needsUpdate = true;
+      }
+      if (vehicles.truckMesh.instanceColor) {
+        vehicles.truckMesh.instanceColor.needsUpdate = true;
+      }
       headlightMesh.instanceMatrix.needsUpdate = true;
       taillightMesh.instanceMatrix.needsUpdate = true;
     }
