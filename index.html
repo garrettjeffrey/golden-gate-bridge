@@ -13,6 +13,7 @@
     input[type=range], select { width: 100%; }
     #info { position: absolute; right: 12px; bottom: 12px; padding: 10px 12px; background: rgba(0,0,0,0.5); color: #d8d8d8; border-radius: 10px; font-size: 11px; }
   </style>
+  <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
       "imports": {
@@ -49,7 +50,35 @@
     </div>
   </div>
   <div id="info">Orbit: drag • Pan: right-drag • Dolly: wheel</div>
-  <script type="module">
+  <script type="module-shim">
+    function ensureWebGLSupport() {
+      try {
+        const canvas = document.createElement('canvas');
+        return !!(window.WebGL2RenderingContext && canvas.getContext('webgl2')) ||
+          !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+      } catch (error) {
+        console.error('Error while checking WebGL support', error);
+        return false;
+      }
+    }
+
+    if (!ensureWebGLSupport()) {
+      const warning = document.createElement('div');
+      warning.textContent = 'This demo requires WebGL, which is unavailable in your browser or device.';
+      warning.style.position = 'absolute';
+      warning.style.top = '50%';
+      warning.style.left = '50%';
+      warning.style.transform = 'translate(-50%, -50%)';
+      warning.style.padding = '16px 18px';
+      warning.style.background = 'rgba(0, 0, 0, 0.8)';
+      warning.style.color = '#f0f0f0';
+      warning.style.borderRadius = '10px';
+      warning.style.fontSize = '14px';
+      warning.style.textAlign = 'center';
+      document.body.appendChild(warning);
+      throw new Error('WebGL is not available.');
+    }
+
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
