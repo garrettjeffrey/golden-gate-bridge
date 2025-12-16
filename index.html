@@ -56,7 +56,7 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     document.body.appendChild(renderer.domElement);
 
@@ -371,8 +371,10 @@
     bridgeGroup.add(vehicles.truckMesh);
 
     const lightGeometry = new THREE.BoxGeometry(0.3, 0.35, 0.15);
-    const headlightMaterial = new THREE.MeshBasicMaterial({ color: '#f7f5dc' });
-    const taillightMaterial = new THREE.MeshBasicMaterial({ color: '#ff5145' });
+    const baseHeadlightColor = new THREE.Color('#f7f5dc');
+    const baseTaillightColor = new THREE.Color('#ff5145');
+    const headlightMaterial = new THREE.MeshBasicMaterial({ color: baseHeadlightColor.clone() });
+    const taillightMaterial = new THREE.MeshBasicMaterial({ color: baseTaillightColor.clone() });
     const headlightMesh = new THREE.InstancedMesh(lightGeometry, headlightMaterial, vehicleTotal * 2);
     const taillightMesh = new THREE.InstancedMesh(lightGeometry, taillightMaterial, vehicleTotal * 2);
     headlightMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -411,8 +413,9 @@
       let truckIndex = 0;
       let lightIndex = 0;
       const headlightIntensity = THREE.MathUtils.lerp(0.3, 2.8, dayFactor);
-      headlightMaterial.color.setScalar(headlightIntensity);
-      taillightMaterial.color.setScalar(THREE.MathUtils.lerp(0.8, 2.3, dayFactor));
+      headlightMaterial.color.copy(baseHeadlightColor).multiplyScalar(headlightIntensity);
+      const taillightIntensity = THREE.MathUtils.lerp(0.8, 2.3, dayFactor);
+      taillightMaterial.color.copy(baseTaillightColor).multiplyScalar(taillightIntensity);
 
       for (let i = 0; i < vehicleTotal; i++) {
         const state = trafficState[i];
