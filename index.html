@@ -5,14 +5,170 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golden Gate Bridge – Interactive Scene</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0d13; font-family: "Inter", system-ui, sans-serif; }
-    #ui { position: absolute; top: 12px; left: 12px; padding: 12px; background: rgba(0,0,0,0.55); color: #f0f0f0; border-radius: 10px; max-width: 320px; backdrop-filter: blur(8px); }
-    #ui h1 { margin: 0 0 8px 0; font-size: 16px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .control { margin: 6px 0 12px 0; }
-    label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px; }
-    input[type=range], select { width: 100%; }
-    #info { position: absolute; right: 12px; bottom: 12px; padding: 10px 12px; background: rgba(0,0,0,0.5); color: #d8d8d8; border-radius: 10px; font-size: 11px; }
-  </style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: radial-gradient(120% 120% at 20% 20%, #13223a, #0a0d13 55%);
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      color: #eef2f7;
+    }
+
+    #ui {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(16, 25, 40, 0.92), rgba(15, 24, 36, 0.75));
+      color: #f3f6fc;
+      border-radius: 14px;
+      max-width: 330px;
+      min-width: 300px;
+      backdrop-filter: blur(10px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    #ui h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.35px;
+      color: #f7fbff;
+    }
+
+    .panel-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      border: 1px solid rgba(122, 208, 255, 0.45);
+      color: #7ad0ff;
+      background: rgba(122, 208, 255, 0.08);
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .badge.active {
+      background: linear-gradient(135deg, rgba(122, 208, 255, 0.18), rgba(122, 208, 255, 0.08));
+      box-shadow: 0 0 0 1px rgba(122, 208, 255, 0.4), 0 10px 28px rgba(122, 208, 255, 0.18);
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      color: #a8b5c7;
+      text-transform: uppercase;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 10px;
+    }
+
+    .control {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #dce4f2;
+      font-weight: 600;
+    }
+
+    .value-pill {
+      font-size: 12px;
+      color: #9bc4ff;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(122, 208, 255, 0.12);
+      border: 1px solid rgba(122, 208, 255, 0.3);
+    }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: #7ad0ff;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(122, 208, 255, 0.9), rgba(122, 208, 255, 0.25));
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #e8f6ff;
+      border-radius: 50%;
+      box-shadow: 0 6px 16px rgba(122, 208, 255, 0.45);
+      border: 2px solid #7ad0ff;
+      cursor: pointer;
+    }
+
+    input[type=range]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #e8f6ff;
+      border-radius: 50%;
+      box-shadow: 0 6px 16px rgba(122, 208, 255, 0.45);
+      border: 2px solid #7ad0ff;
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      color: #e9f1ff;
+      font-weight: 600;
+      outline: none;
+    }
+
+    #info {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      padding: 11px 13px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #d8d8d8;
+      border-radius: 10px;
+      font-size: 11px;
+      letter-spacing: 0.25px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+</style>
   <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
   <script type="importmap">
     {
@@ -24,29 +180,38 @@
   </script>
 </head>
 <body>
-  <div id="ui">
-    <h1>Golden Gate Simulator</h1>
-    <div class="control">
-      <label for="fogRange">Fog <span id="fogValue">40%</span></label>
-      <input id="fogRange" type="range" min="0" max="100" value="40" />
+    <div id="ui">
+    <div class="panel-top">
+      <h1>Golden Gate Bridge</h1>
+      <div class="badge-row">
+        <button class="badge" id="duskPreset" type="button">Dusk</button>
+        <button class="badge" id="rainPreset" type="button">Rainy</button>
+      </div>
     </div>
-    <div class="control">
-      <label for="trafficRange">Traffic density <span id="trafficValue">70%</span></label>
-      <input id="trafficRange" type="range" min="0" max="100" value="70" />
-    </div>
-    <div class="control">
-      <label for="weatherSelect">Weather preset</label>
-      <select id="weatherSelect">
-        <option value="clear">Clear</option>
-        <option value="marine">Marine layer</option>
-        <option value="overcast">Overcast</option>
-        <option value="stormy">Stormy</option>
-      </select>
-    </div>
-    <div class="control">
-      <label for="timeRange">Time of day</label>
-      <input id="timeRange" type="range" min="0" max="100" value="35" />
-      <small>Dawn → Day → Dusk → Night</small>
+    <p class="section-title">Fine-tune the atmosphere</p>
+    <div class="controls-grid">
+      <div class="control">
+        <label for="fogRange">Fog level <span class="value-pill" id="fogValue">40%</span></label>
+        <input id="fogRange" type="range" min="0" max="100" value="40" />
+      </div>
+      <div class="control">
+        <label for="trafficRange">Traffic density <span class="value-pill" id="trafficValue">70%</span></label>
+        <input id="trafficRange" type="range" min="0" max="100" value="70" />
+      </div>
+      <div class="control">
+        <label for="weatherSelect">Weather preset</label>
+        <select id="weatherSelect">
+          <option value="clear">Clear</option>
+          <option value="marine">Marine layer</option>
+          <option value="overcast">Overcast</option>
+          <option value="stormy">Stormy</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="timeRange">Time of day</label>
+        <input id="timeRange" type="range" min="0" max="100" value="35" />
+        <small style="color:#a8b5c7; font-size:11px;">Dawn → Day → Dusk → Night</small>
+      </div>
     </div>
   </div>
   <div id="info">Orbit: drag • Pan: right-drag • Dolly: wheel</div>
@@ -543,7 +708,26 @@
       trafficValue: document.getElementById('trafficValue'),
       weather: document.getElementById('weatherSelect'),
       time: document.getElementById('timeRange'),
+      duskButton: document.getElementById('duskPreset'),
+      rainButton: document.getElementById('rainPreset'),
     };
+
+    function applyPreset({ time, weather, fog, traffic }) {
+      if (typeof time === 'number') controlsUi.time.value = time;
+      if (typeof weather === 'string') controlsUi.weather.value = weather;
+      if (typeof fog === 'number') controlsUi.fog.value = fog;
+      if (typeof traffic === 'number') controlsUi.traffic.value = traffic;
+    }
+
+    controlsUi.duskButton.addEventListener('click', () => {
+      controlsUi.duskButton.classList.add('active');
+      applyPreset({ time: 78, fog: 50 });
+    });
+
+    controlsUi.rainButton.addEventListener('click', () => {
+      controlsUi.rainButton.classList.add('active');
+      applyPreset({ weather: 'stormy', fog: 65, traffic: 60 });
+    });
 
     const weatherPresets = {
       clear: { fogDensity: 0.01, cloud: 0.05, rain: 0, lightning: 0 },
