@@ -354,6 +354,8 @@
       }
       const carMesh = new THREE.InstancedMesh(carGeometry, materials[0], count);
       const truckMesh = new THREE.InstancedMesh(truckGeometry, materials[1], count);
+      carMesh.material.vertexColors = true;
+      truckMesh.material.vertexColors = true;
       carMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       truckMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       return { carMesh, truckMesh, materials };
@@ -410,7 +412,7 @@
 
       for (let i = 0; i < vehicleTotal; i++) {
         const state = trafficState[i];
-        if (i > visibleCount) continue;
+        if (i >= visibleCount) continue;
         const direction = i % 2 === 0 ? 1 : -1;
         const lane = state.lane - 1.5;
         const progress = (elapsed * state.speed + state.offset) % 1;
