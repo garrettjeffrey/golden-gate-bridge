@@ -243,25 +243,44 @@
       document.body.appendChild(warning);
     }
 
+    function applyImportMap(threeUrl) {
+      const existing = document.getElementById('three-import-map');
+      if (existing) existing.remove();
+
+      const script = document.createElement('script');
+      script.type = 'importmap';
+      script.id = 'three-import-map';
+      script.textContent = JSON.stringify({ imports: { three: threeUrl } });
+      document.head.appendChild(script);
+    }
+
     async function loadThreeWithFallbacks() {
       const sources = [
         {
+          label: 'unpkg',
           three: 'https://unpkg.com/three@0.164.1/build/three.module.js',
           controls: 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js',
         },
         {
+          label: 'jsdelivr',
           three: 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js',
           controls: 'https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js',
+        },
+        {
+          label: 'esm.sh',
+          three: 'https://esm.sh/three@0.164.1?dev',
+          controls: 'https://esm.sh/three@0.164.1/examples/jsm/controls/OrbitControls.js?dev',
         },
       ];
 
       for (const source of sources) {
         try {
+          applyImportMap(source.three);
           const THREE = await import(source.three);
           const { OrbitControls } = await import(source.controls);
           return { THREE, OrbitControls, source };
         } catch (error) {
-          console.warn(`Failed to load THREE from ${source.three}`, error);
+          console.warn(`Failed to load THREE from ${source.label}`, error);
         }
       }
 
