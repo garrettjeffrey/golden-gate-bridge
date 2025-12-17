@@ -315,12 +315,16 @@
       scene.fog = new THREE.FogExp2(fogColor, 0.012);
 
       const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-      camera.position.set(-60, 35, 150);
+      camera.position.set(-200, 120, 280);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
-      controls.target.set(0, 18, 0);
+      controls.minDistance = 100;
+      controls.maxDistance = 420;
+      controls.maxPolarAngle = Math.PI * 0.48;
+      controls.target.set(30, 22, 0);
+      controls.update();
 
       const hemisphereLight = new THREE.HemisphereLight('#96b6d1', '#1f2b20', 0.7);
       scene.add(hemisphereLight);
