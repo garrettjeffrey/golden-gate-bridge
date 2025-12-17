@@ -14,6 +14,12 @@
       color: #eef2f7;
     }
 
+    canvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+    }
+
     #ui {
       position: absolute;
       top: 16px;
@@ -219,9 +225,9 @@
       }
     }
 
-    if (!ensureWebGLSupport()) {
+    function showFatalMessage(message) {
       const warning = document.createElement('div');
-      warning.textContent = 'This demo requires WebGL, which is unavailable in your browser or device.';
+      warning.textContent = message;
       warning.style.position = 'absolute';
       warning.style.top = '50%';
       warning.style.left = '50%';
@@ -232,193 +238,231 @@
       warning.style.borderRadius = '10px';
       warning.style.fontSize = '14px';
       warning.style.textAlign = 'center';
+      warning.style.maxWidth = '420px';
+      warning.style.lineHeight = '1.5';
       document.body.appendChild(warning);
-      throw new Error('WebGL is not available.');
     }
 
-    import * as THREE from 'https://unpkg.com/three@0.164.1/build/three.module.js';
-    import { OrbitControls } from 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js';
+    async function loadThreeWithFallbacks() {
+      const sources = [
+        {
+          three: 'https://unpkg.com/three@0.164.1/build/three.module.js',
+          controls: 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js',
+        },
+        {
+          three: 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js',
+          controls: 'https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js',
+        },
+      ];
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    document.body.appendChild(renderer.domElement);
-
-    const scene = new THREE.Scene();
-    const fogColor = new THREE.Color('#1a1f29');
-    scene.background = fogColor.clone();
-    scene.fog = new THREE.FogExp2(fogColor, 0.012);
-
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.set(-60, 35, 150);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.target.set(0, 18, 0);
-
-    const hemisphereLight = new THREE.HemisphereLight('#96b6d1', '#1f2b20', 0.7);
-    scene.add(hemisphereLight);
-
-    const ambientLight = new THREE.AmbientLight('#7c8ea0', 0.25);
-    scene.add(ambientLight);
-
-    const sunLight = new THREE.DirectionalLight('#ffffff', 2.3);
-    sunLight.castShadow = false;
-    scene.add(sunLight);
-
-    const moonLight = new THREE.DirectionalLight('#d5e4ff', 0.45);
-    scene.add(moonLight);
-
-    const starGeometry = new THREE.BufferGeometry();
-    const starCount = 800;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-      const radius = 900;
-      const theta = Math.acos(THREE.MathUtils.randFloatSpread(2));
-      const phi = THREE.MathUtils.randFloatSpread(Math.PI * 2);
-      starPositions[i * 3] = radius * Math.sin(theta) * Math.cos(phi);
-      starPositions[i * 3 + 1] = radius * Math.cos(theta);
-      starPositions[i * 3 + 2] = radius * Math.sin(theta) * Math.sin(phi);
-    }
-    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({ color: '#cde2ff', size: 1.8, sizeAttenuation: true, depthWrite: false });
-    const starField = new THREE.Points(starGeometry, starMaterial);
-    scene.add(starField);
-
-    function createNormalTexture(size = 64) {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const imageData = ctx.createImageData(size, size);
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const nx = 128 + Math.sin(i * 0.17) * 40;
-        const ny = 128 + Math.sin(i * 0.11) * 40;
-        imageData.data[i] = nx;
-        imageData.data[i + 1] = ny;
-        imageData.data[i + 2] = 255;
-        imageData.data[i + 3] = 255;
+      for (const source of sources) {
+        try {
+          const THREE = await import(source.three);
+          const { OrbitControls } = await import(source.controls);
+          return { THREE, OrbitControls, source };
+        } catch (error) {
+          console.warn(`Failed to load THREE from ${source.three}`, error);
+        }
       }
-      ctx.putImageData(imageData, 0, 0);
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(30, 30);
-      return texture;
+
+      throw new Error('Unable to load 3D engine modules. Please check your connection or CDN availability.');
     }
 
-    function applyHeightFog(material) {
-      material.fog = true;
-      material.onBeforeCompile = (shader) => {
-        shader.uniforms.fogHeight = { value: 26 };
-        shader.uniforms.fogBase = { value: 0 };
-        shader.vertexShader = shader.vertexShader.replace(
-          '#include <common>',
-          '#include <common>\nvarying vec3 vWorldPosition;'
-        );
-        shader.vertexShader = shader.vertexShader.replace(
-          '#include <fog_vertex>',
-          'vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;\n#include <fog_vertex>'
-        );
-        shader.fragmentShader = shader.fragmentShader.replace(
-          '#include <common>',
-          '#include <common>\nvarying vec3 vWorldPosition;\nuniform float fogHeight;\nuniform float fogBase;'
-        );
-        shader.fragmentShader = shader.fragmentShader.replace(
-          'float fogFactor = smoothstep( fogNear, fogFar, fogDepth );',
-          `float fogFactor = smoothstep( fogNear, fogFar, fogDepth );
-           float heightAtten = clamp(exp(-(vWorldPosition.y - fogBase) / fogHeight), 0.0, 1.0);
-           fogFactor *= heightAtten;`
-        );
-      };
-    }
+    async function init() {
+      if (!ensureWebGLSupport()) {
+        showFatalMessage('This demo requires WebGL, which is unavailable in your browser or device.');
+        throw new Error('WebGL is not available.');
+      }
+
+      let THREE, OrbitControls;
+      try {
+        ({ THREE, OrbitControls } = await loadThreeWithFallbacks());
+      } catch (error) {
+        console.error(error);
+        showFatalMessage('We could not load the 3D renderer. Please refresh, try a different network, or revisit later.');
+        return;
+      }
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const fogColor = new THREE.Color('#1a1f29');
+      scene.background = fogColor.clone();
+      scene.fog = new THREE.FogExp2(fogColor, 0.012);
+
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+      camera.position.set(-60, 35, 150);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.target.set(0, 18, 0);
+
+      const hemisphereLight = new THREE.HemisphereLight('#96b6d1', '#1f2b20', 0.7);
+      scene.add(hemisphereLight);
+
+      const ambientLight = new THREE.AmbientLight('#7c8ea0', 0.25);
+      scene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight('#ffffff', 2.3);
+      sunLight.castShadow = false;
+      scene.add(sunLight);
+
+      const moonLight = new THREE.DirectionalLight('#d5e4ff', 0.45);
+      scene.add(moonLight);
+
+      const starGeometry = new THREE.BufferGeometry();
+      const starCount = 800;
+      const starPositions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        const radius = 900;
+        const theta = Math.acos(THREE.MathUtils.randFloatSpread(2));
+        const phi = THREE.MathUtils.randFloatSpread(Math.PI * 2);
+        starPositions[i * 3] = radius * Math.sin(theta) * Math.cos(phi);
+        starPositions[i * 3 + 1] = radius * Math.cos(theta);
+        starPositions[i * 3 + 2] = radius * Math.sin(theta) * Math.sin(phi);
+      }
+      starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+      const starMaterial = new THREE.PointsMaterial({ color: '#cde2ff', size: 1.8, sizeAttenuation: true, depthWrite: false });
+      const starField = new THREE.Points(starGeometry, starMaterial);
+      scene.add(starField);
+
+      function createNormalTexture(size = 64) {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(size, size);
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          const nx = 128 + Math.sin(i * 0.17) * 40;
+          const ny = 128 + Math.sin(i * 0.11) * 40;
+          imageData.data[i] = nx;
+          imageData.data[i + 1] = ny;
+          imageData.data[i + 2] = 255;
+          imageData.data[i + 3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(30, 30);
+        return texture;
+      }
+
+      function applyHeightFog(material) {
+        material.fog = true;
+        material.onBeforeCompile = (shader) => {
+          shader.uniforms.fogHeight = { value: 26 };
+          shader.uniforms.fogBase = { value: 0 };
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <common>',
+            '#include <common>\nvarying vec3 vWorldPosition;'
+          );
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <fog_vertex>',
+            'vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;\n#include <fog_vertex>'
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <common>',
+            '#include <common>\nvarying vec3 vWorldPosition;\nuniform float fogHeight;\nuniform float fogBase;'
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            'float fogFactor = smoothstep( fogNear, fogFar, fogDepth );',
+            `float fogFactor = smoothstep( fogNear, fogFar, fogDepth );
+             float heightAtten = clamp(exp(-(vWorldPosition.y - fogBase) / fogHeight), 0.0, 1.0);
+             fogFactor *= heightAtten;`
+          );
+        };
+      }
 
 
-    const groundGroup = new THREE.Group();
-    scene.add(groundGroup);
+      const groundGroup = new THREE.Group();
+      scene.add(groundGroup);
 
-    const terrainMaterial = new THREE.MeshStandardMaterial({ color: '#6d8c55', roughness: 0.95, metalness: 0.05 });
-    applyHeightFog(terrainMaterial);
+      const terrainMaterial = new THREE.MeshStandardMaterial({ color: '#6d8c55', roughness: 0.95, metalness: 0.05 });
+      applyHeightFog(terrainMaterial);
 
-    function createHill(width, height, depth, color) {
-      const geo = new THREE.BoxGeometry(width, height, depth, 8, 8, 8);
-      geo.translate(0, height / 2, 0);
-      const mat = terrainMaterial.clone();
-      mat.color = new THREE.Color(color);
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.castShadow = false;
-      mesh.receiveShadow = true;
-      return mesh;
-    }
+      function createHill(width, height, depth, color) {
+        const geo = new THREE.BoxGeometry(width, height, depth, 8, 8, 8);
+        geo.translate(0, height / 2, 0);
+        const mat = terrainMaterial.clone();
+        mat.color = new THREE.Color(color);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        return mesh;
+      }
 
-    const presidioHill = createHill(220, 35, 160, '#6a844f');
-    presidioHill.position.set(-120, 0, -40);
-    groundGroup.add(presidioHill);
+      const presidioHill = createHill(220, 35, 160, '#6a844f');
+      presidioHill.position.set(-120, 0, -40);
+      groundGroup.add(presidioHill);
 
-    const marinHill = createHill(200, 45, 150, '#70894f');
-    marinHill.position.set(140, 0, 25);
-    groundGroup.add(marinHill);
+      const marinHill = createHill(200, 45, 150, '#70894f');
+      marinHill.position.set(140, 0, 25);
+      groundGroup.add(marinHill);
 
-    const goldenHill = createHill(240, 18, 190, '#8e7f4f');
-    goldenHill.position.set(-40, 0, -160);
-    groundGroup.add(goldenHill);
+      const goldenHill = createHill(240, 18, 190, '#8e7f4f');
+      goldenHill.position.set(-40, 0, -160);
+      groundGroup.add(goldenHill);
 
-    const waterNormal = createNormalTexture();
-    const waterMaterial = new THREE.MeshStandardMaterial({
-      color: '#1a2c3a',
-      metalness: 0.3,
-      roughness: 0.35,
-      normalMap: waterNormal,
-      transparent: true,
-      opacity: 0.95
-    });
-    applyHeightFog(waterMaterial);
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000, 100, 100), waterMaterial);
-    water.rotation.x = -Math.PI / 2;
-    water.position.y = -2;
-    scene.add(water);
+      const waterNormal = createNormalTexture();
+      const waterMaterial = new THREE.MeshStandardMaterial({
+        color: '#1a2c3a',
+        metalness: 0.3,
+        roughness: 0.35,
+        normalMap: waterNormal,
+        transparent: true,
+        opacity: 0.95
+      });
+      applyHeightFog(waterMaterial);
+      const water = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000, 100, 100), waterMaterial);
+      water.rotation.x = -Math.PI / 2;
+      water.position.y = -2;
+      scene.add(water);
 
-    const bridgeGroup = new THREE.Group();
-    scene.add(bridgeGroup);
+      const bridgeGroup = new THREE.Group();
+      scene.add(bridgeGroup);
 
-    const internationalOrange = '#c0362c';
-    const towerMaterial = new THREE.MeshStandardMaterial({ color: internationalOrange, metalness: 0.25, roughness: 0.35 });
-    applyHeightFog(towerMaterial);
+      const internationalOrange = '#c0362c';
+      const towerMaterial = new THREE.MeshStandardMaterial({ color: internationalOrange, metalness: 0.25, roughness: 0.35 });
+      applyHeightFog(towerMaterial);
 
-    function createTower() {
-      const tower = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.BoxGeometry(16, 60, 18), towerMaterial);
-      base.castShadow = base.receiveShadow = true;
-      tower.add(base);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(14, 14, 16), towerMaterial);
-      top.position.y = 37;
-      tower.add(top);
-      const arch = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 6), towerMaterial);
-      arch.position.set(0, 12, 0);
-      tower.add(arch);
-      return tower;
-    }
+      function createTower() {
+        const tower = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(16, 60, 18), towerMaterial);
+        base.castShadow = base.receiveShadow = true;
+        tower.add(base);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(14, 14, 16), towerMaterial);
+        top.position.y = 37;
+        tower.add(top);
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(14, 10, 6), towerMaterial);
+        arch.position.set(0, 12, 0);
+        tower.add(arch);
+        return tower;
+      }
 
-    const towerSouth = createTower();
-    towerSouth.position.set(-30, 10, 0);
-    bridgeGroup.add(towerSouth);
+      const towerSouth = createTower();
+      towerSouth.position.set(-30, 10, 0);
+      bridgeGroup.add(towerSouth);
 
-    const towerNorth = createTower();
-    towerNorth.position.set(90, 10, 0);
-    bridgeGroup.add(towerNorth);
+      const towerNorth = createTower();
+      towerNorth.position.set(90, 10, 0);
+      bridgeGroup.add(towerNorth);
 
-    const deckMaterial = new THREE.MeshStandardMaterial({ color: '#a83a2f', metalness: 0.25, roughness: 0.55 });
-    applyHeightFog(deckMaterial);
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(260, 6, 20), deckMaterial);
-    deck.position.set(30, 10, 0);
-    bridgeGroup.add(deck);
+      const deckMaterial = new THREE.MeshStandardMaterial({ color: '#a83a2f', metalness: 0.25, roughness: 0.55 });
+      applyHeightFog(deckMaterial);
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(260, 6, 20), deckMaterial);
+      deck.position.set(30, 10, 0);
+      bridgeGroup.add(deck);
 
-    const roadMaterial = new THREE.MeshStandardMaterial({ color: '#3c3c3f', roughness: 0.9 });
-    applyHeightFog(roadMaterial);
-    const road = new THREE.Mesh(new THREE.BoxGeometry(260, 0.3, 18), roadMaterial);
-    road.position.set(30, 13.1, 0);
-    bridgeGroup.add(road);
+      const roadMaterial = new THREE.MeshStandardMaterial({ color: '#3c3c3f', roughness: 0.9 });
+      applyHeightFog(roadMaterial);
+      const road = new THREE.Mesh(new THREE.BoxGeometry(260, 0.3, 18), roadMaterial);
+      road.position.set(30, 13.1, 0);
+      bridgeGroup.add(road);
 
     const laneMarkings = new THREE.Mesh(new THREE.PlaneGeometry(260, 0.4, 1, 100));
     const laneTexture = new THREE.CanvasTexture(document.createElement('canvas'));
@@ -812,6 +856,9 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+    }
+
+    init();
   </script>
 </body>
 </html>
